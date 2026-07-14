@@ -2,41 +2,57 @@
    FUEGOS ARTIFICIALES ROMÁNTICOS
    ============================================ */
 
-const canvas = document.getElementById('fireworks');
-const ctx    = canvas.getContext('2d');
+const canvas = document.getElementById("fireworks");
+const ctx = canvas.getContext("2d");
 
-// Paleta de colores rosa para los fuegos
 const COLORES = [
-  '#e91e63', '#f06292', '#f48fb1',
-  '#fce4ec', '#ad1457', '#ff80ab',
-  '#ff4081', '#f8bbd0', '#ffffff',
-  '#ffb3c1', '#ff6b9d', '#c9184a'
+  "#e91e63",
+  "#f06292",
+  "#f48fb1",
+  "#fce4ec",
+  "#ad1457",
+  "#ff80ab",
+  "#ff4081",
+  "#f8bbd0",
+  "#ffffff",
+  "#ffb3c1",
+  "#ff6b9d",
+  "#c9184a",
 ];
 
 let ancho, alto;
-let cohetes   = [];
+let cohetes = [];
 let particulas = [];
-let activo    = true;
+let activo = true;
 let frameCount = 0;
 
+// ── Estado del mensaje ──
+const MENSAJE_COMPLETO = "Yo Te amo, admiro y Deseo con fuerzas";
+let mensajeVisible = false;
+let mensajeAlpha = 0;
+let mensajeTexto = "";
+let charIndex = 0;
+let escribiendo = false;
+let borrandoMensaje = false;
+
 function resize() {
-  ancho = canvas.width  = window.innerWidth;
-  alto  = canvas.height = window.innerHeight;
+  ancho = canvas.width = window.innerWidth;
+  alto = canvas.height = window.innerHeight;
 }
-window.addEventListener('resize', resize);
+window.addEventListener("resize", resize);
 resize();
 
 /* ── Cohete ── */
 class Cohete {
   constructor() {
-    this.x   = Math.random() * ancho * 0.8 + ancho * 0.1;
-    this.y   = alto;
-    this.tx  = Math.random() * ancho * 0.7 + ancho * 0.15;
-    this.ty  = Math.random() * alto  * 0.45 + alto * 0.05;
+    this.x = Math.random() * ancho * 0.8 + ancho * 0.1;
+    this.y = alto;
+    this.tx = Math.random() * ancho * 0.7 + ancho * 0.15;
+    this.ty = Math.random() * alto * 0.45 + alto * 0.05;
     this.vel = 18 + Math.random() * 8;
     const ang = Math.atan2(this.ty - this.y, this.tx - this.x);
-    this.vx  = Math.cos(ang) * this.vel;
-    this.vy  = Math.sin(ang) * this.vel;
+    this.vx = Math.cos(ang) * this.vel;
+    this.vy = Math.sin(ang) * this.vel;
     this.color = COLORES[Math.floor(Math.random() * COLORES.length)];
     this.estela = [];
     this.exploto = false;
@@ -45,20 +61,17 @@ class Cohete {
   update() {
     this.estela.push({ x: this.x, y: this.y });
     if (this.estela.length > 12) this.estela.shift();
-
     this.x += this.vx;
     this.y += this.vy;
-    this.vy += 0.4; // gravedad suave
-
-    const distancia = Math.hypot(this.tx - this.x, this.ty - this.y);
-    if (distancia < 20 || this.y <= this.ty) {
+    this.vy += 0.4;
+    const dist = Math.hypot(this.tx - this.x, this.ty - this.y);
+    if (dist < 20 || this.y <= this.ty) {
       this.exploto = true;
       explotar(this.x, this.y, this.color);
     }
   }
 
   draw() {
-    // Estela
     for (let i = 0; i < this.estela.length; i++) {
       const alpha = i / this.estela.length;
       ctx.beginPath();
@@ -67,10 +80,9 @@ class Cohete {
       ctx.globalAlpha = alpha * 0.6;
       ctx.fill();
     }
-    // Punta
     ctx.beginPath();
     ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = "#ffffff";
     ctx.globalAlpha = 1;
     ctx.fill();
     ctx.globalAlpha = 1;
@@ -80,15 +92,14 @@ class Cohete {
 /* ── Partícula ── */
 class Particula {
   constructor(x, y, color, tipo) {
-    this.x     = x;
-    this.y     = y;
+    this.x = x;
+    this.y = y;
     this.color = color;
-    this.tipo  = tipo; // 'normal' | 'estrella' | 'corazon'
-
-    const angulo    = Math.random() * Math.PI * 2;
-    const velocidad = Math.random() * 7 + 2;
-    this.vx   = Math.cos(angulo) * velocidad;
-    this.vy   = Math.sin(angulo) * velocidad;
+    this.tipo = tipo;
+    const ang = Math.random() * Math.PI * 2;
+    const vel = Math.random() * 7 + 2;
+    this.vx = Math.cos(ang) * vel;
+    this.vy = Math.sin(ang) * vel;
     this.vida = 1;
     this.decay = 0.012 + Math.random() * 0.016;
     this.radio = Math.random() * 3 + 1.5;
@@ -97,10 +108,10 @@ class Particula {
   }
 
   update() {
-    this.x    += this.vx;
-    this.y    += this.vy;
-    this.vy   += this.gravedad;
-    this.vx   *= 0.98;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += this.gravedad;
+    this.vx *= 0.98;
     this.vida -= this.decay;
     this.radio *= 0.995;
   }
@@ -109,65 +120,67 @@ class Particula {
     if (this.vida <= 0) return;
     ctx.save();
     ctx.globalAlpha = Math.max(0, this.vida);
-
-    if (this.tipo === 'corazon') {
+    if (this.tipo === "corazon") {
       dibujarCorazon(ctx, this.x, this.y, this.radio * 2.5, this.color);
     } else if (this.chispa) {
-      // chispa alargada
       ctx.beginPath();
       ctx.moveTo(this.x, this.y);
       ctx.lineTo(this.x - this.vx * 3, this.y - this.vy * 3);
       ctx.strokeStyle = this.color;
-      ctx.lineWidth   = this.radio * 0.8;
-      ctx.lineCap     = 'round';
+      ctx.lineWidth = this.radio * 0.8;
+      ctx.lineCap = "round";
       ctx.stroke();
     } else {
       ctx.beginPath();
       ctx.arc(this.x, this.y, Math.max(0.1, this.radio), 0, Math.PI * 2);
       ctx.fillStyle = this.color;
-      ctx.shadowBlur  = 8;
+      ctx.shadowBlur = 8;
       ctx.shadowColor = this.color;
       ctx.fill();
     }
     ctx.restore();
   }
 
-  muerto() { return this.vida <= 0; }
+  muerto() {
+    return this.vida <= 0;
+  }
 }
 
-function dibujarCorazon(ctx, x, y, tamaño, color) {
+function dibujarCorazon(ctx, x, y, t, color) {
   ctx.beginPath();
-  ctx.moveTo(x, y + tamaño * 0.3);
-  ctx.bezierCurveTo(x, y, x - tamaño * 0.7, y, x - tamaño * 0.7, y + tamaño * 0.35);
-  ctx.bezierCurveTo(x - tamaño * 0.7, y + tamaño * 0.7, x, y + tamaño * 1.1, x, y + tamaño * 1.1);
-  ctx.bezierCurveTo(x, y + tamaño * 1.1, x + tamaño * 0.7, y + tamaño * 0.7, x + tamaño * 0.7, y + tamaño * 0.35);
-  ctx.bezierCurveTo(x + tamaño * 0.7, y, x, y, x, y + tamaño * 0.3);
-  ctx.fillStyle   = color;
-  ctx.shadowBlur  = 12;
+  ctx.moveTo(x, y + t * 0.3);
+  ctx.bezierCurveTo(x, y, x - t * 0.7, y, x - t * 0.7, y + t * 0.35);
+  ctx.bezierCurveTo(x - t * 0.7, y + t * 0.7, x, y + t * 1.1, x, y + t * 1.1);
+  ctx.bezierCurveTo(
+    x,
+    y + t * 1.1,
+    x + t * 0.7,
+    y + t * 0.7,
+    x + t * 0.7,
+    y + t * 0.35,
+  );
+  ctx.bezierCurveTo(x + t * 0.7, y, x, y, x, y + t * 0.3);
+  ctx.fillStyle = color;
+  ctx.shadowBlur = 12;
   ctx.shadowColor = color;
   ctx.fill();
 }
 
 function explotar(x, y, colorBase) {
-  const cantidad  = 80 + Math.floor(Math.random() * 50);
-  const conCorazon = Math.random() < 0.4; // 40% de explosiones tienen corazones
-
+  const cantidad = 80 + Math.floor(Math.random() * 50);
+  const conCorazon = Math.random() < 0.4;
   for (let i = 0; i < cantidad; i++) {
-    const color = Math.random() < 0.5
-      ? colorBase
-      : COLORES[Math.floor(Math.random() * COLORES.length)];
-
-    let tipo = 'normal';
-    if (conCorazon && i < 12) tipo = 'corazon';
-
+    const color =
+      Math.random() < 0.5
+        ? colorBase
+        : COLORES[Math.floor(Math.random() * COLORES.length)];
+    const tipo = conCorazon && i < 12 ? "corazon" : "normal";
     particulas.push(new Particula(x, y, color, tipo));
   }
-
-  // Ráfaga de brillo central
   for (let i = 0; i < 20; i++) {
-    const p = new Particula(x, y, '#ffffff', 'normal');
-    p.radio   = Math.random() * 2 + 0.5;
-    p.decay   = 0.04 + Math.random() * 0.03;
+    const p = new Particula(x, y, "#ffffff", "normal");
+    p.radio = Math.random() * 2 + 0.5;
+    p.decay = 0.04 + Math.random() * 0.03;
     particulas.push(p);
   }
 }
@@ -176,47 +189,169 @@ function lanzarCohete() {
   cohetes.push(new Cohete());
 }
 
+/* ── Dibujar mensaje en canvas ── */
+function dibujarMensaje() {
+  if (!mensajeVisible && mensajeAlpha <= 0) return;
+
+  const cx = ancho / 2;
+  const cy = alto / 2;
+  const tamañoMax = Math.min(ancho * 0.07, 60);
+  const tamaño = Math.max(tamañoMax, 22);
+
+  ctx.save();
+  ctx.globalAlpha = mensajeAlpha;
+
+  // Sombra suave detrás del texto
+  ctx.shadowBlur = 40;
+  ctx.shadowColor = "#e91e63";
+
+  // Fondo semitransparente tipo píldora
+  ctx.font = `italic bold ${tamaño}px Georgia, serif`;
+  const medidas = ctx.measureText(mensajeTexto);
+  const tw = medidas.width;
+  const padX = 36;
+  const padY = 20;
+  const rx = cx - tw / 2 - padX;
+  const ry = cy - tamaño - padY;
+  const rw = tw + padX * 2;
+  const rh = tamaño + padY * 2;
+  const radio = 18;
+
+  ctx.fillStyle = "rgba(90, 0, 30, 0.55)";
+  ctx.beginPath();
+  ctx.moveTo(rx + radio, ry);
+  ctx.lineTo(rx + rw - radio, ry);
+  ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + radio);
+  ctx.lineTo(rx + rw, ry + rh - radio);
+  ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - radio, ry + rh);
+  ctx.lineTo(rx + radio, ry + rh);
+  ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - radio);
+  ctx.lineTo(rx, ry + radio);
+  ctx.quadraticCurveTo(rx, ry, rx + radio, ry);
+  ctx.closePath();
+  ctx.fill();
+
+  // Borde rosa brillante
+  ctx.strokeStyle = "rgba(255, 100, 150, 0.7)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Texto principal con gradiente
+  const grad = ctx.createLinearGradient(cx - tw / 2, 0, cx + tw / 2, 0);
+  grad.addColorStop(0, "#ffffff");
+  grad.addColorStop(0.3, "#fce4ec");
+  grad.addColorStop(0.6, "#f48fb1");
+  grad.addColorStop(1, "#ffffff");
+
+  ctx.fillStyle = grad;
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(mensajeTexto, cx, cy);
+
+  // Cursor parpadeante mientras escribe
+  if (escribiendo && Math.floor(Date.now() / 500) % 2 === 0) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("|", cx + tw / 2 + 6, cy);
+  }
+
+  // Corazones decorativos a los lados
+  if (!escribiendo || charIndex > 5) {
+    ctx.font = `${tamaño * 0.7}px serif`;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#e91e63";
+    ctx.fillStyle = `rgba(233,30,99,${mensajeAlpha * 0.9})`;
+    ctx.fillText("💗", cx - tw / 2 - padX - 10, cy);
+    ctx.fillText("💗", cx + tw / 2 + padX + 10, cy);
+  }
+
+  ctx.restore();
+}
+
 /* ── Loop principal ── */
 function loop() {
   if (!activo) return;
   frameCount++;
 
-  // Fondo semitransparente para efecto estela
-  ctx.fillStyle = 'rgba(252, 228, 236, 0.18)';
+  ctx.fillStyle = "rgba(252, 228, 236, 0.18)";
   ctx.fillRect(0, 0, ancho, alto);
 
-  // Lanzar cohetes periódicamente
   if (frameCount % 38 === 0) lanzarCohete();
-  // Extra rápido al inicio
   if (frameCount < 120 && frameCount % 18 === 0) lanzarCohete();
 
-  // Cohetes
-  cohetes = cohetes.filter(c => {
+  cohetes = cohetes.filter((c) => {
     c.update();
     c.draw();
     return !c.exploto;
   });
 
-  // Partículas
-  particulas = particulas.filter(p => {
+  particulas = particulas.filter((p) => {
     p.update();
     p.draw();
     return !p.muerto();
   });
 
+  // Fade in/out del mensaje
+  if (mensajeVisible && mensajeAlpha < 1) {
+    mensajeAlpha = Math.min(1, mensajeAlpha + 0.025);
+  }
+  if (borrandoMensaje && mensajeAlpha > 0) {
+    mensajeAlpha = Math.max(0, mensajeAlpha - 0.018);
+  }
+
+  dibujarMensaje();
+
   requestAnimationFrame(loop);
 }
 
+/* ── Efecto máquina de escribir ── */
+function iniciarEscritura() {
+  mensajeVisible = true;
+  mensajeAlpha = 0;
+  mensajeTexto = "";
+  charIndex = 0;
+  escribiendo = true;
+  borrandoMensaje = false;
+
+  const intervalo = setInterval(() => {
+    if (charIndex < MENSAJE_COMPLETO.length) {
+      mensajeTexto += MENSAJE_COMPLETO[charIndex];
+      charIndex++;
+    } else {
+      escribiendo = false;
+      clearInterval(intervalo);
+    }
+  }, 55); // velocidad de escritura
+}
+
+function borrarMensaje() {
+  borrandoMensaje = true;
+  setTimeout(() => {
+    mensajeVisible = false;
+    borrandoMensaje = false;
+    mensajeTexto = "";
+  }, 2000);
+}
+
+/* ── Secuencia de mensajes ── */
+// Aparece a los 1.5s y dura hasta que se apagan los fuegos
+setTimeout(() => {
+  iniciarEscritura();
+}, 1500);
+
+// Borrar mensaje cuando se detienen los fuegos
+setTimeout(() => {
+  borrarMensaje();
+}, 9200);
+
 /* ── Parar fuegos después de 12 segundos ── */
 setTimeout(() => {
-  // Lanzar una salva final
   for (let i = 0; i < 6; i++) {
     setTimeout(() => lanzarCohete(), i * 200);
   }
-  // Luego dejar que se apaguen solos
   setTimeout(() => {
     activo = false;
-    // Borrar canvas suavemente
     let alpha = 0;
     const fade = setInterval(() => {
       alpha += 0.05;
@@ -224,50 +359,50 @@ setTimeout(() => {
       ctx.fillRect(0, 0, ancho, alto);
       if (alpha >= 1) {
         clearInterval(fade);
-        canvas.style.display = 'none';
+        canvas.style.display = "none";
       }
     }, 50);
   }, 2500);
 }, 9500);
 
 /* ── Click para fuegos extra ── */
-document.addEventListener('click', (e) => {
+document.addEventListener("click", (e) => {
   if (!activo) return;
-  explotar(e.clientX, e.clientY,
-    COLORES[Math.floor(Math.random() * COLORES.length)]);
+  explotar(
+    e.clientX,
+    e.clientY,
+    COLORES[Math.floor(Math.random() * COLORES.length)],
+  );
 });
 
 /* ── Arrancar ── */
-// Lanzar cohetes iniciales rápidamente
 for (let i = 0; i < 4; i++) {
   setTimeout(() => lanzarCohete(), i * 300);
 }
-
 loop();
 
 /* ============================================
    ANIMACIONES DE ENTRADA CON SCROLL
    ============================================ */
-const observador = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-    }
-  });
-}, { threshold: 0.15 });
+const observador = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) entry.target.classList.add("visible");
+    });
+  },
+  { threshold: 0.15 },
+);
 
-document.querySelectorAll('.foto-marco, .mensaje-card').forEach(el => {
-  el.style.opacity = '0';
-  el.style.transform = 'translateY(40px)';
-  el.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+document.querySelectorAll(".foto-marco, .mensaje-card").forEach((el) => {
+  el.style.opacity = "0";
+  el.style.transform = "translateY(40px)";
+  el.style.transition = "opacity 0.7s ease, transform 0.7s ease";
   observador.observe(el);
 });
 
-// Cuando el observador los detecta se añade la clase visible
-const style = document.createElement('style');
+const style = document.createElement("style");
 style.textContent = `
-  .foto-marco.visible,
-  .mensaje-card.visible {
+  .foto-marco.visible, .mensaje-card.visible {
     opacity: 1 !important;
     transform: translateY(0) !important;
   }
