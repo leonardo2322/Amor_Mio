@@ -195,27 +195,44 @@ function dibujarMensaje() {
 
   const cx = ancho / 2;
   const cy = alto / 2;
-  const tamañoMax = Math.min(ancho * 0.07, 60);
-  const tamaño = Math.max(tamañoMax, 22);
+
+  // Tamaño base según el dispositivo
+  let fontSize;
+
+  if (ancho <= 480) {
+    fontSize = 20;
+  } else if (ancho <= 768) {
+    fontSize = 28;
+  } else {
+    fontSize = Math.min(ancho * 0.07, 60);
+  }
+
+  // Reducir automáticamente si el texto es muy largo
+  ctx.font = `italic bold ${fontSize}px Georgia, serif`;
+
+  while (ctx.measureText(mensajeTexto).width > ancho * 0.82 && fontSize > 14) {
+    fontSize--;
+    ctx.font = `italic bold ${fontSize}px Georgia, serif`;
+  }
+
+  const medidas = ctx.measureText(mensajeTexto);
+  const tw = medidas.width;
+
+  const padX = 36;
+  const padY = 20;
+
+  const rx = cx - tw / 2 - padX;
+  const ry = cy - fontSize - padY;
+  const rw = tw + padX * 2;
+  const rh = fontSize + padY * 2;
+  const radio = 18;
 
   ctx.save();
   ctx.globalAlpha = mensajeAlpha;
 
-  // Sombra suave detrás del texto
+  // Fondo
   ctx.shadowBlur = 40;
   ctx.shadowColor = "#e91e63";
-
-  // Fondo semitransparente tipo píldora
-  ctx.font = `italic bold ${tamaño}px Georgia, serif`;
-  const medidas = ctx.measureText(mensajeTexto);
-  const tw = medidas.width;
-  const padX = 36;
-  const padY = 20;
-  const rx = cx - tw / 2 - padX;
-  const ry = cy - tamaño - padY;
-  const rw = tw + padX * 2;
-  const rh = tamaño + padY * 2;
-  const radio = 18;
 
   ctx.fillStyle = "rgba(90, 0, 30, 0.55)";
   ctx.beginPath();
@@ -231,12 +248,12 @@ function dibujarMensaje() {
   ctx.closePath();
   ctx.fill();
 
-  // Borde rosa brillante
+  // Borde
   ctx.strokeStyle = "rgba(255, 100, 150, 0.7)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Texto principal con gradiente
+  // Gradiente del texto
   const grad = ctx.createLinearGradient(cx - tw / 2, 0, cx + tw / 2, 0);
   grad.addColorStop(0, "#ffffff");
   grad.addColorStop(0.3, "#fce4ec");
@@ -250,15 +267,15 @@ function dibujarMensaje() {
   ctx.textBaseline = "middle";
   ctx.fillText(mensajeTexto, cx, cy);
 
-  // Cursor parpadeante mientras escribe
+  // Cursor mientras escribe
   if (escribiendo && Math.floor(Date.now() / 500) % 2 === 0) {
     ctx.fillStyle = "#ffffff";
     ctx.fillText("|", cx + tw / 2 + 6, cy);
   }
 
-  // Corazones decorativos a los lados
+  // Corazones
   if (!escribiendo || charIndex > 5) {
-    ctx.font = `${tamaño * 0.7}px serif`;
+    ctx.font = `${fontSize * 0.7}px serif`;
     ctx.shadowBlur = 15;
     ctx.shadowColor = "#e91e63";
     ctx.fillStyle = `rgba(233,30,99,${mensajeAlpha * 0.9})`;
